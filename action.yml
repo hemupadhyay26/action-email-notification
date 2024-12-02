@@ -10,7 +10,8 @@ branding:
 # Define your inputs here.
 inputs:
   type:
-    description: enter option from ses and password
+    description: type of email service to use ses or password
+    required: true
   server_address:
     description: SMTP server address
   server_port:
@@ -25,7 +26,7 @@ inputs:
     required: true
   to:
     description: Recipients mail addresses (separated with comma)
-    required: false
+    required: true
   from:
     description:
       Full name of mail sender (might be with an email address specified in <>)
@@ -42,11 +43,10 @@ inputs:
   secret_key:
     description: AWS secret key
   attachments:
-    description: List of attachments to be sent with the email
+    description: List of attachments to be sent with the email (only support file not folder)
     required: false
   convert_markdown:
     description: Convert markdown to HTML if set to true
-    default: 'false'
     required: false
 
 # Define your outputs here.
