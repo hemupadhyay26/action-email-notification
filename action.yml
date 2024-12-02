@@ -43,7 +43,9 @@ inputs:
   secret_key:
     description: AWS secret key
   attachments:
-    description: List of attachments to be sent with the email (only support file not folder)
+    description:
+      List of attachments to be sent with the email (only support file not
+      folder)
     required: false
   convert_markdown:
     description: Convert markdown to HTML if set to true

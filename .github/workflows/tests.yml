@@ -27,7 +27,7 @@ jobs:
         with:
           type: ses
           access_key: ${{secrets.ACCESS_KEY}}
-          secret_access_key: ${{secrets.SECRET_ACCESS_KEY}}
+          secret_key: ${{secrets.SECRET_ACCESS_KEY}}
           region: ${{secrets.REGION}}
           from: ${{ vars.FROM }}
           to: ${{ vars.TO }}
