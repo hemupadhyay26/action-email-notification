@@ -1,0 +1,51 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test-action:
+    name: GitHub Actions Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Using SES
+        id: ses
+        uses: ./
+        with:
+          type: ses
+          access_key: ${{secrets.ACCESS_KEY}}
+          secret_access_key: ${{secrets.SECRET_ACCESS_KEY}}
+          region: ${{secrets.REGION}}
+          from: ${{ vars.FROM }}
+          to: ${{ vars.TO }}
+          subject: ${{ vars.SUBJECT }}
+          body: ${{ vars.BODY }}
+          attachments: ${{ vars.ATTACHMENTS }}
+
+      - name: Using Password
+        id: password
+        uses: ./
+        with:
+          type: password
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{secrets.USERNAME}}
+          password: ${{secrets.PASSWORD}}
+          from: ${{ vars.FROM }}
+          to: ${{ vars.TO }}
+          subject: ${{ vars.SUBJECT }}
+          body: ${{ vars.BODY }}
+          attachments: ${{ vars.ATTACHMENTS }}
