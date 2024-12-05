@@ -1,5 +1,6 @@
 import * as aws from '@aws-sdk/client-ses'
-const nodemailer = require('nodemailer')
+import nodemailer, { Transporter } from 'nodemailer'
+import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
 interface AWSConfig {
   accessKey: string
@@ -7,7 +8,11 @@ interface AWSConfig {
   region: string
 }
 
-export const connectWithSes = ({ accessKey, secretKey, region }: AWSConfig) => {
+export const connectWithSes = ({
+  accessKey,
+  secretKey,
+  region
+}: AWSConfig): Transporter => {
   const ses = new aws.SES({
     apiVersion: '2010-12-01',
     region: region,
@@ -34,20 +39,19 @@ export const connectWithPassword = ({
   serverAddress,
   serverPort,
   secure
-}: passwordConfig) => {
+}: passwordConfig): Transporter => {
   if (!serverAddress) {
     throw new Error('Server address must be specified')
   }
-  if (!secure) {
-    secure = serverPort === '465' ? 'true' : 'false'
-  }
-  return nodemailer.createTransport({
-    host: `${serverAddress}`,
-    port: serverPort,
-    secure: secure, // true for port 465, false for other ports
+  const smtpOptions: SMTPTransport.Options = {
+    host: serverAddress,
+    port: Number(serverPort),
+    secure: secure === 'true', // true for port 465, false for other ports
     auth: {
-      user: `${username}`,
-      pass: `${password}`
+      user: username,
+      pass: password
     }
-  })
+  }
+
+  return nodemailer.createTransport(smtpOptions)
 }

@@ -4,6 +4,7 @@ import { connectWithPassword, connectWithSes } from './connection'
 import { getText } from './getText'
 import { getFrom } from './getFrom'
 import { getAttachments } from './getAttachments'
+import { SentMessageInfo } from 'nodemailer'
 
 /**
  * The main function for the action.
@@ -11,17 +12,22 @@ import { getAttachments } from './getAttachments'
  */
 export async function run(): Promise<string | void> {
   try {
-    let serverAddress = core.getInput('server_address')
-    let serverPort = core.getInput('server_port')
+    // intial input for setup connection
+    const type = core.getInput('type', { required: true })
+
+    // email server configuration
+    const serverAddress = core.getInput('server_address')
+    const serverPort = core.getInput('server_port')
     let secure = core.getInput('secure')
-    let username = core.getInput('username')
-    let password = core.getInput('password')
+    const username = core.getInput('username')
+    const password = core.getInput('password')
     const accessKey = core.getInput('access_key')
     const secretKey = core.getInput('secret_key')
     const region = core.getInput('region')
 
-    // intial input for setup connection
-    const type = core.getInput('type', { required: true })
+    if (!secure) {
+      secure = serverPort === '465' ? 'true' : 'false'
+    }
 
     let transporter
     if (type === 'ses') {
@@ -69,28 +75,33 @@ export async function run(): Promise<string | void> {
 
     let i = 0
 
-    while (true) {
+    while (i <= 10) {
       try {
-        const info = await transporter.sendMail(mailOptions)
-        core.info('mail send successfully')
-        core.setOutput('mail_id:', info.messageId)
+        //need to change it as it is still using the any type
+
+        /* eslint-disable-line */ const info: SentMessageInfo =
+          await transporter.sendMail(mailOptions)
+        core.info('Mail sent successfully')
+        /* eslint-disable-line */ core.setOutput('mail_id', info.messageId)
         break
-      } catch (error: any) {
-        if (!error.message.includes('Try again later,')) {
-          core.setFailed(error.message)
-          break
+      } catch (error) {
+        const errorMessage = (error as Error).message // Ensure type safety for error
+
+        if (!errorMessage.includes('Try again later,')) {
+          core.setFailed(errorMessage)
+          break // Exit loop for non-retryable errors
         }
+
         if (i > 10) {
-          core.setFailed(error.message)
-          break
+          core.setFailed(`Exceeded retry attempts: ${errorMessage}`)
+          break // Exit loop after 10 retries
         }
-        console.log('Received: ' + error.message)
-        if (i < 2) {
-          console.log('Trying again in a minute...')
-        } else {
-          console.log('Trying again in ' + i + ' minutes...')
-        }
-        await sleep(i * 60000)
+
+        console.log(`Attempt ${i + 1}: Received error: ${errorMessage}`)
+        const retryDelay = i < 2 ? 1 : i // Delay in minutes (1 minute for the first 2 attempts)
+        console.log(`Retrying in ${retryDelay} minute(s)...`)
+        await sleep(retryDelay * 60000) // Sleep for the calculated delay
+
         i++
       }
     }

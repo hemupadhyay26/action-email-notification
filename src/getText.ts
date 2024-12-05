@@ -1,5 +1,5 @@
-const fs = require('fs')
-const showdown = require('showdown')
+import * as fs from 'fs'
+import showdown from 'showdown'
 
 export function getText(
   textOrFile: string,
