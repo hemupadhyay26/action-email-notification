@@ -14,6 +14,6 @@ export const getAttachments = async (
   return files.map(file => ({
     filename: path.basename(file), // Extract the file name
     path: file, // Full file path
-    cid: file.replace(/^.*[\\\/]/, '') // Unique identifier (file name)
+    cid: file.replace(/^.*[\\/]/, '') // Unique identifier (file name)
   }))
 }

@@ -73865,10 +73865,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.connectWithPassword = exports.connectWithSes = void 0;
 const aws = __importStar(__nccwpck_require__(7192));
-const nodemailer = __nccwpck_require__(6002);
+const nodemailer_1 = __importDefault(__nccwpck_require__(6002));
 const connectWithSes = ({ accessKey, secretKey, region }) => {
     const ses = new aws.SES({
         apiVersion: '2010-12-01',
@@ -73878,7 +73881,7 @@ const connectWithSes = ({ accessKey, secretKey, region }) => {
             secretAccessKey: secretKey
         }
     });
-    return nodemailer.createTransport({
+    return nodemailer_1.default.createTransport({
         SES: { ses, aws }
     });
 };
@@ -73887,18 +73890,16 @@ const connectWithPassword = ({ username, password, serverAddress, serverPort, se
     if (!serverAddress) {
         throw new Error('Server address must be specified');
     }
-    if (!secure) {
-        secure = serverPort === '465' ? 'true' : 'false';
-    }
-    return nodemailer.createTransport({
-        host: `${serverAddress}`,
-        port: serverPort,
-        secure: secure, // true for port 465, false for other ports
+    const smtpOptions = {
+        host: serverAddress,
+        port: Number(serverPort),
+        secure: secure === 'true', // true for port 465, false for other ports
         auth: {
-            user: `${username}`,
-            pass: `${password}`
+            user: username,
+            pass: password
         }
-    });
+    };
+    return nodemailer_1.default.createTransport(smtpOptions);
 };
 exports.connectWithPassword = connectWithPassword;
 
@@ -73946,7 +73947,7 @@ const getAttachments = async (attachments) => {
     return files.map(file => ({
         filename: path.basename(file), // Extract the file name
         path: file, // Full file path
-        cid: file.replace(/^.*[\\\/]/, '') // Unique identifier (file name)
+        cid: file.replace(/^.*[\\/]/, '') // Unique identifier (file name)
     }));
 };
 exports.getAttachments = getAttachments;
@@ -73972,14 +73973,40 @@ function getFrom(from, username) {
 /***/ }),
 
 /***/ 4612:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getText = getText;
-const fs = __nccwpck_require__(9896);
-const showdown = __nccwpck_require__(4925);
+const fs = __importStar(__nccwpck_require__(9896));
+const showdown_1 = __importDefault(__nccwpck_require__(4925));
 function getText(textOrFile, convertMarkdown) {
     let text = textOrFile;
     // Read text from file
@@ -73989,7 +74016,7 @@ function getText(textOrFile, convertMarkdown) {
     }
     // Convert Markdown to HTML
     if (convertMarkdown) {
-        const converter = new showdown.Converter({ tables: true });
+        const converter = new showdown_1.default.Converter({ tables: true });
         text = converter.makeHtml(text);
     }
     return text;
@@ -74040,16 +74067,20 @@ const getAttachments_1 = __nccwpck_require__(5561);
  */
 async function run() {
     try {
-        let serverAddress = core.getInput('server_address');
-        let serverPort = core.getInput('server_port');
+        // intial input for setup connection
+        const type = core.getInput('type', { required: true });
+        // email server configuration
+        const serverAddress = core.getInput('server_address');
+        const serverPort = core.getInput('server_port');
         let secure = core.getInput('secure');
-        let username = core.getInput('username');
-        let password = core.getInput('password');
+        const username = core.getInput('username');
+        const password = core.getInput('password');
         const accessKey = core.getInput('access_key');
         const secretKey = core.getInput('secret_key');
         const region = core.getInput('region');
-        // intial input for setup connection
-        const type = core.getInput('type', { required: true });
+        if (!secure) {
+            secure = serverPort === '465' ? 'true' : 'false';
+        }
         let transporter;
         if (type === 'ses') {
             transporter = (0, connection_1.connectWithSes)({ accessKey, secretKey, region });
@@ -74093,30 +74124,28 @@ async function run() {
             attachments: attachments ? await (0, getAttachments_1.getAttachments)(attachments) : undefined
         };
         let i = 0;
-        while (true) {
+        while (i <= 10) {
             try {
-                const info = await transporter.sendMail(mailOptions);
-                core.info('mail send successfully');
-                core.setOutput('mail_id:', info.messageId);
+                //need to change it as it is still using the any type
+                /* eslint-disable-line */ const info = await transporter.sendMail(mailOptions);
+                core.info('Mail sent successfully');
+                /* eslint-disable-line */ core.setOutput('mail_id', info.messageId);
                 break;
             }
             catch (error) {
-                if (!error.message.includes('Try again later,')) {
-                    core.setFailed(error.message);
-                    break;
+                const errorMessage = error.message; // Ensure type safety for error
+                if (!errorMessage.includes('Try again later,')) {
+                    core.setFailed(errorMessage);
+                    break; // Exit loop for non-retryable errors
                 }
                 if (i > 10) {
-                    core.setFailed(error.message);
-                    break;
+                    core.setFailed(`Exceeded retry attempts: ${errorMessage}`);
+                    break; // Exit loop after 10 retries
                 }
-                console.log('Received: ' + error.message);
-                if (i < 2) {
-                    console.log('Trying again in a minute...');
-                }
-                else {
-                    console.log('Trying again in ' + i + ' minutes...');
-                }
-                await (0, sleep_1.sleep)(i * 60000);
+                console.log(`Attempt ${i + 1}: Received error: ${errorMessage}`);
+                const retryDelay = i < 2 ? 1 : i; // Delay in minutes (1 minute for the first 2 attempts)
+                console.log(`Retrying in ${retryDelay} minute(s)...`);
+                await (0, sleep_1.sleep)(retryDelay * 60000); // Sleep for the calculated delay
                 i++;
             }
         }
@@ -74138,7 +74167,7 @@ async function run() {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sleep = sleep;
-function sleep(ms) {
+async function sleep(ms) {
     return new Promise(resolve => {
         setTimeout(resolve, ms);
     });
